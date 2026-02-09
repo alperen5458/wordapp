@@ -54,6 +54,7 @@
     .choice.wrong { background:#fde7ea; border-color:#f3b8c1; }
     .quizMeta { margin-top: 10px; display:flex; gap:12px; flex-wrap:wrap; justify-content:space-between; font-size: 15px; color:#333; }
     .small { font-size: 14px; color:#666; }
+    .pill { display:inline-block; padding: 6px 10px; border-radius: 999px; background:#f3f3f3; font-size: 12px; }
     @media (max-width: 720px){
       h1 { font-size: 40px; }
       .grid2 { grid-template-columns: 1fr; }
@@ -103,7 +104,7 @@
     <hr/>
 
     <!-- QUIZ MODÜLÜ -->
-    <h2 style="margin: 0 0 10px; font-size:26px;">Çoktan Seçmeli Quiz</h2>
+    <h2 style="margin: 0 0 10px; font-size:26px;">Çoktan Seçmeli Quiz (EN → TR)</h2>
 
     <div class="grid2">
       <button class="btn primary" onclick="quizStart()">Quiz Başlat</button>
@@ -115,8 +116,13 @@
       <div class="quizChoices" id="quizChoices"></div>
 
       <div class="quizMeta">
-        <div>Skor: <b id="quizScore">0</b> / <b id="quizTotal">0</b></div>
-        <div id="quizStatus" class="small">En az 4 kelime ekleyince quiz daha iyi çalışır.</div>
+        <span class="pill">Skor: <b id="quizScore">0</b> / <b id="quizTotal">0</b></span>
+        <span class="pill">Bugün: <b id="dailyDone">0</b> / <b id="dailyGoal">30</b></span>
+        <span class="pill">Tekrar kuyruğu: <b id="retryCount">0</b></span>
+      </div>
+
+      <div id="quizStatus" class="small" style="margin-top:10px;">
+        En az 4 kelime ekleyince quiz daha iyi çalışır.
       </div>
     </div>
 
@@ -125,11 +131,46 @@
 <script>
   // ---------- STORAGE ----------
   const STORAGE_KEY = "wordapp_words_v1";
+
+  // Quiz extra state keys
+  const QUIZ_DAILY_KEY = "wordapp_quiz_daily_v1";
+  const QUIZ_RETRY_KEY = "wordapp_quiz_retry_v1";
+
+  const DAILY_GOAL = 30;                 // <-- senin seçimin
+  const AUTO_NEXT_DELAY_MS = 700;        // doğru cevap sonrası otomatik geçiş
+
   let words = [];
   let current = null;       // {en,tr}
   let showingAnswer = false;
 
+  // ---------- QUIZ STATE ----------
+  let quizActive = false;
+  let quizCurrent = null;   // { word, options[], correctIndex }
+  let quizAnswered = false;
+
+  let quizScore = 0;
+  let quizTotal = 0;
+
+  // Daily progress
+  let dailyDate = "";
+  let dailyDone = 0;
+
+  // Retry queue (wrong answers asked again)
+  // stored as array of strings keys "en|||tr"
+  let retryQueue = [];
+  let autoNextTimer = null;
+
+  function todayKey() {
+    // YYYY-MM-DD in local time
+    const d = new Date();
+    const y = String(d.getFullYear());
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
   function load() {
+    // load words
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       words = raw ? JSON.parse(raw) : [];
@@ -137,8 +178,16 @@
     } catch {
       words = [];
     }
-    updateInfo("✅ Hazır. Kelime ekleyebilirsin.", true);
+
+    // load daily
+    loadDaily();
+
+    // load retry queue
+    loadRetryQueue();
+
     updateCount();
+    updateInfo("✅ Hazır. Kelime ekleyebilirsin.", true);
+    renderDailyUI();
   }
 
   function save() {
@@ -158,6 +207,97 @@
 
   function normalize(s) {
     return (s || "").trim();
+  }
+
+  function keyOfWord(w) {
+    return `${w.en}|||${w.tr}`;
+  }
+
+  // ---------- DAILY ----------
+  function loadDaily() {
+    const t = todayKey();
+    try {
+      const raw = localStorage.getItem(QUIZ_DAILY_KEY);
+      if (!raw) {
+        dailyDate = t;
+        dailyDone = 0;
+        persistDaily();
+        return;
+      }
+      const obj = JSON.parse(raw);
+      const savedDate = typeof obj.date === "string" ? obj.date : "";
+      const savedDone = typeof obj.done === "number" ? obj.done : 0;
+
+      if (savedDate !== t) {
+        // new day
+        dailyDate = t;
+        dailyDone = 0;
+        persistDaily();
+      } else {
+        dailyDate = savedDate;
+        dailyDone = savedDone;
+      }
+    } catch {
+      dailyDate = t;
+      dailyDone = 0;
+      persistDaily();
+    }
+  }
+
+  function persistDaily() {
+    localStorage.setItem(QUIZ_DAILY_KEY, JSON.stringify({ date: dailyDate, done: dailyDone }));
+  }
+
+  function incDaily() {
+    loadDaily(); // ensure date rollover
+    dailyDone += 1;
+    persistDaily();
+    renderDailyUI();
+  }
+
+  function renderDailyUI() {
+    document.getElementById("dailyGoal").innerText = String(DAILY_GOAL);
+    document.getElementById("dailyDone").innerText = String(dailyDone);
+  }
+
+  // ---------- RETRY QUEUE ----------
+  function loadRetryQueue() {
+    try {
+      const raw = localStorage.getItem(QUIZ_RETRY_KEY);
+      retryQueue = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(retryQueue)) retryQueue = [];
+    } catch {
+      retryQueue = [];
+    }
+    renderRetryUI();
+  }
+
+  function persistRetryQueue() {
+    localStorage.setItem(QUIZ_RETRY_KEY, JSON.stringify(retryQueue));
+    renderRetryUI();
+  }
+
+  function renderRetryUI() {
+    document.getElementById("retryCount").innerText = String(retryQueue.length);
+  }
+
+  function enqueueRetry(word) {
+    const k = keyOfWord(word);
+    // add twice to increase probability (asked again sooner)
+    retryQueue.push(k);
+    retryQueue.push(k);
+    // keep queue reasonable
+    if (retryQueue.length > 80) retryQueue = retryQueue.slice(retryQueue.length - 80);
+    persistRetryQueue();
+  }
+
+  function dequeueRetryWordOrNull() {
+    if (retryQueue.length === 0) return null;
+    const k = retryQueue.shift();
+    persistRetryQueue();
+    const [en, tr] = k.split("|||");
+    const found = words.find(w => w.en === en && w.tr === tr);
+    return found || null;
   }
 
   // ---------- MAIN FEATURES ----------
@@ -218,6 +358,14 @@
     words = words.filter(w => !(w.en === current.en && w.tr === current.tr));
     const after = words.length;
     save();
+
+    // also remove from retryQueue
+    const k = keyOfWord(current);
+    if (retryQueue.length) {
+      retryQueue = retryQueue.filter(x => x !== k);
+      persistRetryQueue();
+    }
+
     current = null;
     showingAnswer = false;
     document.getElementById("card").innerText = "Henüz soru yok";
@@ -240,7 +388,6 @@
       await navigator.clipboard.writeText(txt);
       updateInfo("✅ JSON kopyalandı.", true);
     } catch {
-      // Fallback: select
       const ta = document.getElementById("backupArea");
       ta.focus();
       ta.select();
@@ -257,7 +404,6 @@
     try {
       const arr = JSON.parse(txt);
       if (!Array.isArray(arr)) throw new Error("not array");
-      // sanitize
       const cleaned = arr
         .filter(x => x && typeof x.en === "string" && typeof x.tr === "string")
         .map(x => ({ en: normalize(x.en), tr: normalize(x.tr) }))
@@ -266,34 +412,31 @@
       words = cleaned;
       save();
       updateInfo("✅ JSON içe aktarıldı.", true);
-      // Quiz varsa reset
-      quizReset();
+
+      // retry queue may contain old keys; clean it
+      retryQueue = retryQueue.filter(k => {
+        const [en,tr] = k.split("|||");
+        return words.some(w => w.en === en && w.tr === tr);
+      });
+      persistRetryQueue();
+
     } catch {
       updateInfo("❌ JSON geçersiz. Formatı kontrol et.", false);
     }
   }
 
   // ---------- QUIZ ----------
-  let quizActive = false;
-  let quizCurrent = null; // {word, options[], correctIndex}
-  let quizScore = 0;
-  let quizTotal = 0;
-  let quizAnswered = false;
-
-  function quizReset() {
-    quizActive = false;
-    quizCurrent = null;
-    quizScore = 0;
-    quizTotal = 0;
-    quizAnswered = false;
-    document.getElementById("quizScore").innerText = "0";
-    document.getElementById("quizTotal").innerText = "0";
-    document.getElementById("quizQuestion").innerText = "Quiz henüz başlamadı";
-    document.getElementById("quizChoices").innerHTML = "";
-    document.getElementById("quizStatus").innerText = "En az 4 kelime ekleyince quiz daha iyi çalışır.";
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
   }
 
   function quizStart() {
+    clearAutoNext();
+
     if (words.length < 4) {
       document.getElementById("quizStatus").innerText = "❌ Quiz için en az 4 kelime lazım (4 şık üretiyoruz).";
       return;
@@ -301,6 +444,13 @@
     quizActive = true;
     quizScore = 0;
     quizTotal = 0;
+    quizAnswered = false;
+    quizCurrent = null;
+
+    // ensure daily loaded/reset if day changed
+    loadDaily();
+    renderDailyUI();
+
     document.getElementById("quizScore").innerText = "0";
     document.getElementById("quizTotal").innerText = "0";
     document.getElementById("quizStatus").innerText = "✅ Quiz başladı. Şıklardan birini seç.";
@@ -308,6 +458,8 @@
   }
 
   function quizNext() {
+    clearAutoNext();
+
     if (!quizActive) {
       document.getElementById("quizStatus").innerText = "Önce “Quiz Başlat”a bas.";
       return;
@@ -317,11 +469,25 @@
       return;
     }
 
+    // daily rollover check
+    loadDaily();
+    renderDailyUI();
+
+    // If daily goal reached, still allow continue but show message
+    const reached = dailyDone >= DAILY_GOAL;
+
     quizAnswered = false;
 
-    // pick correct word
-    const correct = words[Math.floor(Math.random() * words.length)];
-    // pick 3 wrong translations (unique)
+    // 60% chance: ask from retry queue if available, else random.
+    let correct = null;
+    if (retryQueue.length > 0 && Math.random() < 0.6) {
+      correct = dequeueRetryWordOrNull();
+    }
+    if (!correct) {
+      correct = words[Math.floor(Math.random() * words.length)];
+    }
+
+    // pick wrong options from other words (unique TR)
     const wrongPool = words.filter(w => !(w.en === correct.en && w.tr === correct.tr));
     shuffle(wrongPool);
 
@@ -331,7 +497,7 @@
       if (!options.includes(tr)) options.push(tr);
     }
 
-    // If translations collide too much, fallback to any unique
+    // fallback if collisions
     if (options.length < 4) {
       const allTr = [...new Set(words.map(w => w.tr))].filter(tr => tr !== correct.tr);
       shuffle(allTr);
@@ -345,16 +511,15 @@
       document.getElementById("quizStatus").innerText =
         "⚠️ Türkçe karşılıklar çok tekrar ediyor. Daha fazla kelime ekleyince 4 şık daha sağlam olur.";
     } else {
-      document.getElementById("quizStatus").innerText = "Şıklardan birini seç.";
+      document.getElementById("quizStatus").innerText =
+        reached ? "🎉 Günlük hedef tamamlandı! İstersen devam edebilirsin." : "Şıklardan birini seç.";
     }
 
-    // shuffle options
     shuffle(options);
     const correctIndex = options.indexOf(correct.tr);
 
     quizCurrent = { word: correct, options, correctIndex };
 
-    // render
     document.getElementById("quizQuestion").innerText = `“${correct.en}” ne demek?`;
     renderChoices();
   }
@@ -362,6 +527,7 @@
   function renderChoices() {
     const box = document.getElementById("quizChoices");
     box.innerHTML = "";
+
     quizCurrent.options.forEach((opt, idx) => {
       const btn = document.createElement("button");
       btn.className = "choice";
@@ -371,16 +537,26 @@
     });
   }
 
+  function clearAutoNext() {
+    if (autoNextTimer) {
+      clearTimeout(autoNextTimer);
+      autoNextTimer = null;
+    }
+  }
+
   function quizAnswer(idx, btnEl) {
     if (!quizActive || !quizCurrent || quizAnswered) return;
     quizAnswered = true;
+
     quizTotal += 1;
     document.getElementById("quizTotal").innerText = String(quizTotal);
+
+    // daily progress increments on every answered question
+    incDaily();
 
     const buttons = [...document.querySelectorAll("#quizChoices .choice")];
     const correctIdx = quizCurrent.correctIndex;
 
-    // mark
     buttons.forEach((b, i) => {
       b.disabled = true;
       if (i === correctIdx) b.classList.add("correct");
@@ -389,25 +565,50 @@
     if (idx === correctIdx) {
       quizScore += 1;
       document.getElementById("quizScore").innerText = String(quizScore);
-      document.getElementById("quizStatus").innerText = "✅ Doğru! Sonraki soru için “Sonraki Soru”.";
+
+      // daily status message
+      if (dailyDone >= DAILY_GOAL) {
+        document.getElementById("quizStatus").innerText = `✅ Doğru! 🎉 Bugün ${dailyDone}/${DAILY_GOAL} hedef tamamlandı!`;
+      } else {
+        document.getElementById("quizStatus").innerText = `✅ Doğru! (${dailyDone}/${DAILY_GOAL}) Otomatik sonraki soru...`;
+      }
+
+      // auto-next
+      autoNextTimer = setTimeout(() => {
+        quizNext();
+      }, AUTO_NEXT_DELAY_MS);
+
     } else {
       btnEl.classList.add("wrong");
-      document.getElementById("quizStatus").innerText =
-        `❌ Yanlış. Doğru cevap: “${quizCurrent.options[correctIdx]}”. Sonraki soru için “Sonraki Soru”.`;
-    }
-  }
 
-  function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+      // enqueue wrong word to retry queue
+      enqueueRetry(quizCurrent.word);
+
+      document.getElementById("quizStatus").innerText =
+        `❌ Yanlış. Doğru: “${quizCurrent.options[correctIdx]}”. (${dailyDone}/${DAILY_GOAL}) Tekrar sorulacak.`;
+
+      // no auto-next on wrong (kullanıcı görsün). İstersen bunu da otomatik yaparız.
     }
-    return arr;
+
+    // refresh retry counter
+    renderRetryUI();
   }
 
   // init
   load();
-  quizReset();
+
+  // expose functions
+  window.addWord = addWord;
+  window.randomWord = randomWord;
+  window.showAnswer = showAnswer;
+  window.deleteCurrent = deleteCurrent;
+
+  window.makeBackup = makeBackup;
+  window.copyBackup = copyBackup;
+  window.importBackup = importBackup;
+
+  window.quizStart = quizStart;
+  window.quizNext = quizNext;
 </script>
 </body>
 </html>
