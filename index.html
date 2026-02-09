@@ -9,6 +9,7 @@
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 22px; background:#fff; color:#111; }
     h1 { margin: 0 0 16px; font-size: 44px; font-weight: 800; }
     .wrap { max-width: var(--w); margin: 0 auto; }
+
     input, textarea, button {
       width: 100%;
       box-sizing: border-box;
@@ -19,13 +20,16 @@
       outline: none;
       background: #fff;
     }
-    textarea { min-height: 110px; resize: vertical; }
+    textarea { min-height: 130px; resize: vertical; }
     input:focus, textarea:focus { border-color:#cfcfcf; }
+
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+
     .btn { background:#efefef; border:1px solid #e1e1e1; font-weight: 700; cursor:pointer; }
     .btn:active { transform: scale(0.99); }
     .btn.primary { background:#e9e9e9; }
     .btn.danger { background:#efefef; }
+
     .card {
       margin-top: 16px;
       border: 1px solid #e9e9e9;
@@ -55,6 +59,30 @@
     .quizMeta { margin-top: 10px; display:flex; gap:12px; flex-wrap:wrap; justify-content:space-between; font-size: 15px; color:#333; }
     .small { font-size: 14px; color:#666; }
     .pill { display:inline-block; padding: 6px 10px; border-radius: 999px; background:#f3f3f3; font-size: 12px; }
+
+    /* Collapsible */
+    details {
+      border: 1px solid #e9e9e9;
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: #fff;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 18px;
+      list-style: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "▾";
+      float: right;
+      font-weight: 900;
+      color: #555;
+    }
+    details[open] summary::after { content: "▴"; }
+    .detailsBody { margin-top: 12px; }
+
     @media (max-width: 720px){
       h1 { font-size: 40px; }
       .grid2 { grid-template-columns: 1fr; }
@@ -86,23 +114,6 @@
 
     <hr/>
 
-    <div class="grid2">
-      <button class="btn" onclick="makeBackup()">Yedek Al (JSON)</button>
-      <button class="btn" onclick="copyBackup()">JSON Kopyala</button>
-      <button class="btn" onclick="importBackup()">JSON İçe Aktar</button>
-    </div>
-
-    <div style="height:12px"></div>
-    <textarea id="backupArea" placeholder="Yedek JSON burada görünecek / buraya yapıştırıp İçe Aktar'a basabilirsin"></textarea>
-
-    <div class="small" style="margin-top:10px; line-height:1.5;">
-      • Kelimeler cihazında kalıcı kaydedilir (localStorage).<br/>
-      • Yedek almak için “Yedek Al (JSON)” → JSON’u kopyalayıp Notlar’a/Drive’a kaydedebilirsin.<br/>
-      • Geri yüklemek için JSON’u buraya yapıştır → “JSON İçe Aktar”.
-    </div>
-
-    <hr/>
-
     <!-- QUIZ MODÜLÜ -->
     <h2 style="margin: 0 0 10px; font-size:26px;">Çoktan Seçmeli Quiz (EN → TR)</h2>
 
@@ -126,6 +137,32 @@
       </div>
     </div>
 
+    <hr/>
+
+    <!-- JSON / BACKUP (EN ALTA + KAPALI/AÇILIR) -->
+    <details>
+      <summary>Yedek / JSON</summary>
+      <div class="detailsBody">
+        <div class="grid2">
+          <button class="btn" onclick="makeBackup()">Yedek Al (JSON)</button>
+          <button class="btn" onclick="copyBackup()">JSON Kopyala</button>
+          <button class="btn" onclick="importBackup()">JSON İçe Aktar</button>
+          <button class="btn" onclick="clearAllData()">Tüm Verileri Sıfırla</button>
+        </div>
+
+        <div style="height:12px"></div>
+        <textarea id="backupArea" placeholder="Yedek JSON burada görünecek / buraya yapıştırıp İçe Aktar'a basabilirsin"></textarea>
+
+        <div class="small" style="margin-top:10px; line-height:1.5;">
+          • Kelimeler cihazında kalıcı kaydedilir (localStorage).<br/>
+          • “Yedek Al” → JSON’u kopyalayıp Notlar’a/Drive’a koyabilirsin.<br/>
+          • “İçe Aktar” → buraya JSON yapıştırıp içeri alırsın.<br/>
+          • “Tüm Verileri Sıfırla” kelimeleri, quiz skorlarını ve günlük sayacı siler.
+        </div>
+      </div>
+    </details>
+
+    <div style="height:24px"></div>
   </div>
 
 <script>
@@ -136,7 +173,7 @@
   const QUIZ_DAILY_KEY = "wordapp_quiz_daily_v1";
   const QUIZ_RETRY_KEY = "wordapp_quiz_retry_v1";
 
-  const DAILY_GOAL = 30;                 // <-- senin seçimin
+  const DAILY_GOAL = 30;                 // günlük hedef
   const AUTO_NEXT_DELAY_MS = 700;        // doğru cevap sonrası otomatik geçiş
 
   let words = [];
@@ -161,7 +198,6 @@
   let autoNextTimer = null;
 
   function todayKey() {
-    // YYYY-MM-DD in local time
     const d = new Date();
     const y = String(d.getFullYear());
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -179,10 +215,8 @@
       words = [];
     }
 
-    // load daily
+    // load daily + retry queue
     loadDaily();
-
-    // load retry queue
     loadRetryQueue();
 
     updateCount();
@@ -229,7 +263,6 @@
       const savedDone = typeof obj.done === "number" ? obj.done : 0;
 
       if (savedDate !== t) {
-        // new day
         dailyDate = t;
         dailyDone = 0;
         persistDaily();
@@ -249,7 +282,7 @@
   }
 
   function incDaily() {
-    loadDaily(); // ensure date rollover
+    loadDaily();
     dailyDone += 1;
     persistDaily();
     renderDailyUI();
@@ -283,10 +316,8 @@
 
   function enqueueRetry(word) {
     const k = keyOfWord(word);
-    // add twice to increase probability (asked again sooner)
     retryQueue.push(k);
-    retryQueue.push(k);
-    // keep queue reasonable
+    retryQueue.push(k); // daha sık çıkması için iki kez
     if (retryQueue.length > 80) retryQueue = retryQueue.slice(retryQueue.length - 80);
     persistRetryQueue();
   }
@@ -310,8 +341,10 @@
       return;
     }
 
-    // duplicates: same EN+TR
-    const exists = words.some(w => (w.en || "").toLowerCase() === en.toLowerCase() && (w.tr || "").toLowerCase() === tr.toLowerCase());
+    const exists = words.some(w =>
+      (w.en || "").toLowerCase() === en.toLowerCase() &&
+      (w.tr || "").toLowerCase() === tr.toLowerCase()
+    );
     if (exists) {
       updateInfo("⚠️ Bu kelime zaten ekli.", false);
       return;
@@ -359,7 +392,6 @@
     const after = words.length;
     save();
 
-    // also remove from retryQueue
     const k = keyOfWord(current);
     if (retryQueue.length) {
       retryQueue = retryQueue.filter(x => x !== k);
@@ -413,7 +445,7 @@
       save();
       updateInfo("✅ JSON içe aktarıldı.", true);
 
-      // retry queue may contain old keys; clean it
+      // retry queue cleanup
       retryQueue = retryQueue.filter(k => {
         const [en,tr] = k.split("|||");
         return words.some(w => w.en === en && w.tr === tr);
@@ -423,6 +455,45 @@
     } catch {
       updateInfo("❌ JSON geçersiz. Formatı kontrol et.", false);
     }
+  }
+
+  function clearAllData() {
+    const ok = confirm("Tüm veriler silinsin mi? (Kelimeler, quiz skorları, günlük hedef sayacı)");
+    if (!ok) return;
+
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(QUIZ_DAILY_KEY);
+    localStorage.removeItem(QUIZ_RETRY_KEY);
+
+    // reset runtime
+    words = [];
+    current = null;
+    showingAnswer = false;
+
+    quizActive = false;
+    quizCurrent = null;
+    quizAnswered = false;
+    quizScore = 0;
+    quizTotal = 0;
+
+    dailyDate = todayKey();
+    dailyDone = 0;
+    persistDaily();
+
+    retryQueue = [];
+    persistRetryQueue();
+
+    document.getElementById("card").innerText = "Henüz soru yok";
+    document.getElementById("quizQuestion").innerText = "Quiz henüz başlamadı";
+    document.getElementById("quizChoices").innerHTML = "";
+    document.getElementById("quizScore").innerText = "0";
+    document.getElementById("quizTotal").innerText = "0";
+    document.getElementById("backupArea").value = "";
+
+    updateCount();
+    renderDailyUI();
+    updateInfo("✅ Veriler sıfırlandı.", true);
+    document.getElementById("quizStatus").innerText = "En az 4 kelime ekleyince quiz daha iyi çalışır.";
   }
 
   // ---------- QUIZ ----------
@@ -447,7 +518,6 @@
     quizAnswered = false;
     quizCurrent = null;
 
-    // ensure daily loaded/reset if day changed
     loadDaily();
     renderDailyUI();
 
@@ -469,16 +539,13 @@
       return;
     }
 
-    // daily rollover check
     loadDaily();
     renderDailyUI();
 
-    // If daily goal reached, still allow continue but show message
     const reached = dailyDone >= DAILY_GOAL;
-
     quizAnswered = false;
 
-    // 60% chance: ask from retry queue if available, else random.
+    // 60% chance from retry queue
     let correct = null;
     if (retryQueue.length > 0 && Math.random() < 0.6) {
       correct = dequeueRetryWordOrNull();
@@ -487,7 +554,6 @@
       correct = words[Math.floor(Math.random() * words.length)];
     }
 
-    // pick wrong options from other words (unique TR)
     const wrongPool = words.filter(w => !(w.en === correct.en && w.tr === correct.tr));
     shuffle(wrongPool);
 
@@ -497,7 +563,6 @@
       if (!options.includes(tr)) options.push(tr);
     }
 
-    // fallback if collisions
     if (options.length < 4) {
       const allTr = [...new Set(words.map(w => w.tr))].filter(tr => tr !== correct.tr);
       shuffle(allTr);
@@ -551,7 +616,6 @@
     quizTotal += 1;
     document.getElementById("quizTotal").innerText = String(quizTotal);
 
-    // daily progress increments on every answered question
     incDaily();
 
     const buttons = [...document.querySelectorAll("#quizChoices .choice")];
@@ -566,38 +630,30 @@
       quizScore += 1;
       document.getElementById("quizScore").innerText = String(quizScore);
 
-      // daily status message
       if (dailyDone >= DAILY_GOAL) {
         document.getElementById("quizStatus").innerText = `✅ Doğru! 🎉 Bugün ${dailyDone}/${DAILY_GOAL} hedef tamamlandı!`;
       } else {
         document.getElementById("quizStatus").innerText = `✅ Doğru! (${dailyDone}/${DAILY_GOAL}) Otomatik sonraki soru...`;
       }
 
-      // auto-next
       autoNextTimer = setTimeout(() => {
         quizNext();
       }, AUTO_NEXT_DELAY_MS);
 
     } else {
       btnEl.classList.add("wrong");
-
-      // enqueue wrong word to retry queue
       enqueueRetry(quizCurrent.word);
-
       document.getElementById("quizStatus").innerText =
         `❌ Yanlış. Doğru: “${quizCurrent.options[correctIdx]}”. (${dailyDone}/${DAILY_GOAL}) Tekrar sorulacak.`;
-
-      // no auto-next on wrong (kullanıcı görsün). İstersen bunu da otomatik yaparız.
     }
 
-    // refresh retry counter
     renderRetryUI();
   }
 
   // init
   load();
 
-  // expose functions
+  // expose to buttons
   window.addWord = addWord;
   window.randomWord = randomWord;
   window.showAnswer = showAnswer;
@@ -606,6 +662,7 @@
   window.makeBackup = makeBackup;
   window.copyBackup = copyBackup;
   window.importBackup = importBackup;
+  window.clearAllData = clearAllData;
 
   window.quizStart = quizStart;
   window.quizNext = quizNext;
