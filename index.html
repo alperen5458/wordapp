@@ -1,54 +1,81 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>WordApp</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 20px; max-width: 700px; margin: 0 auto; }
-    h1 { margin: 8px 0 16px; }
-    .row { display: grid; grid-template-columns: 1fr; gap: 10px; }
-    input, button, textarea, select { width: 100%; padding: 12px; font-size: 16px; box-sizing: border-box; }
-    button { cursor: pointer; }
-    #card { margin-top: 16px; padding: 18px; border: 1px solid #ddd; border-radius: 12px; font-size: 22px; font-weight: 700; min-height: 72px; display:flex; align-items:center; justify-content:center; }
-    #info { margin-top: 10px; color: #444; font-size: 14px; white-space: pre-line; }
-    .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-    .btns3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
-    .muted { color:#666; font-size: 13px; margin-top: 6px; }
-    textarea { height: 140px; }
-    hr { margin: 18px 0; border: none; border-top: 1px solid #eee; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; }
+    h1 { margin-bottom: 14px; }
+    input, button, textarea { width: 100%; padding: 14px; font-size: 16px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
+    button { background: #efefef; border: 1px solid #e1e1e1; }
+    button:active { transform: scale(0.99); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .card { border: 1px solid #eee; border-radius: 14px; padding: 18px; margin-top: 10px; }
+    .big { font-size: 22px; font-weight: 700; text-align: center; margin: 10px 0 6px; }
+    .muted { color: #666; font-size: 13px; }
+    .ok { color: #0a7f2e; font-weight: 600; }
+    .bad { color: #b00020; font-weight: 600; }
+    .divider { height: 1px; background: #eee; margin: 14px 0; }
+    textarea { min-height: 120px; }
+    .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; background:#f3f3f3; font-size: 12px; margin-right: 6px; }
   </style>
 </head>
 <body>
   <h1>WordApp</h1>
 
+  <input id="en" placeholder="English" />
+  <input id="tr" placeholder="Türkçe" />
+
   <div class="row">
-    <input id="en" placeholder="English" autocomplete="off" />
-    <input id="tr" placeholder="Türkçe" autocomplete="off" />
+    <button id="btnAdd">Kelime Ekle</button>
+    <button id="btnStudy">Kelime Çalış (Rastgele)</button>
+  </div>
+  <div class="row">
+    <button id="btnShow">Cevabı Göster</button>
+    <button id="btnDel">Bu Kelimeyi Sil</button>
+  </div>
 
-    <div class="btns">
-      <button id="addBtn">Kelime Ekle</button>
-      <button id="randomBtn">Kelime Çalış (Rastgele)</button>
+  <div class="card">
+    <div class="big" id="question">Henüz soru yok</div>
+    <div class="muted" id="answerLine"></div>
+
+    <div class="divider"></div>
+
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <span class="pill" id="countPill">Toplam kelime: 0</span>
+      <span class="pill" id="modePill">Mod: Normal</span>
+      <span class="pill" id="scorePill">Skor: 0 / 0</span>
     </div>
 
-    <div class="btns">
-      <button id="showBtn">Cevabı Göster</button>
-      <button id="deleteBtn">Bu Kelimeyi Sil</button>
+    <div class="muted" id="status">✅ Hazır. Kelime ekleyebilirsin.</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px;">Quiz Modu (A): İngilizce → Türkçe yaz</h3>
+    <div class="row">
+      <button id="btnQuizStart">Quiz Başlat</button>
+      <button id="btnQuizExit">Quiz Kapat</button>
     </div>
 
-    <div id="card">Henüz soru yok</div>
-    <div id="info"></div>
-
-    <hr />
-
-    <div class="btns3">
-      <button id="exportBtn">Yedek Al (JSON)</button>
-      <button id="copyBtn">JSON Kopyala</button>
-      <button id="importBtn">JSON İçe Aktar</button>
+    <input id="quizInput" placeholder="Türkçe cevabı buraya yaz..." disabled />
+    <div class="row">
+      <button id="btnQuizCheck" disabled>Kontrol Et</button>
+      <button id="btnQuizNext" disabled>Sonraki Soru</button>
     </div>
+    <button id="btnQuizReveal" disabled>Doğru Cevabı Göster</button>
+    <div class="muted" id="quizFeedback"></div>
+  </div>
 
+  <div class="card">
+    <div class="row">
+      <button id="btnBackup">Yedek Al (JSON)</button>
+      <button id="btnCopy">JSON Kopyala</button>
+    </div>
+    <button id="btnImport">JSON İçe Aktar</button>
     <textarea id="jsonBox" placeholder="Yedek JSON burada görünecek / buraya yapıştırıp İçe Aktar'a basabilirsin"></textarea>
-    <div class="muted">
+
+    <div class="muted" style="margin-top:8px;">
       • Kelimeler cihazında kalıcı kaydedilir (localStorage).<br/>
       • Yedek almak için “Yedek Al (JSON)” → JSON’u kopyalayıp Notlar’a/Drive’a kaydedebilirsin.<br/>
       • Geri yüklemek için JSON’u buraya yapıştır → “JSON İçe Aktar”.
@@ -56,206 +83,307 @@
   </div>
 
 <script>
-(() => {
-  const STORAGE_KEY = "wordapp_words_v1";
+  // ====== Storage ======
+  const STORAGE_KEY = "wordapp_words_v2";
 
-  /** @type {{en:string,tr:string,createdAt:number}[]} */
-  let words = [];
-  /** @type {{en:string,tr:string,dir:"en"|"tr"}|null} */
-  let current = null;
-
-  const $ = (id) => document.getElementById(id);
-
-  const enEl = $("en");
-  const trEl = $("tr");
-  const cardEl = $("card");
-  const infoEl = $("info");
-  const jsonBox = $("jsonBox");
-
-  function norm(s) {
-    return (s || "").trim();
-  }
-
-  function load() {
+  function loadWords() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) { words = []; return; }
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        // Eski format destek: [{en,tr}] veya yeni format
-        words = parsed
-          .map(x => ({
-            en: norm(x.en),
-            tr: norm(x.tr),
-            createdAt: typeof x.createdAt === "number" ? x.createdAt : Date.now()
-          }))
-          .filter(x => x.en && x.tr);
-      } else {
-        words = [];
-      }
-    } catch (e) {
-      words = [];
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      // normalize
+      return arr
+        .filter(x => x && typeof x.en === "string" && typeof x.tr === "string")
+        .map(x => ({ en: x.en.trim(), tr: x.tr.trim() }))
+        .filter(x => x.en && x.tr);
+    } catch {
+      return [];
     }
   }
 
-  function save() {
+  function saveWords(words) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
   }
 
-  function updateInfo(msg) {
-    const count = words.length;
-    const currentTxt = current ? `\nŞu an: ${current.en} — ${current.tr}` : "";
-    infoEl.textContent = `Toplam kelime: ${count}${msg ? "\n" + msg : ""}${currentTxt}`;
+  let words = loadWords();
+
+  // ====== UI refs ======
+  const enEl = document.getElementById("en");
+  const trEl = document.getElementById("tr");
+
+  const questionEl = document.getElementById("question");
+  const answerLineEl = document.getElementById("answerLine");
+  const statusEl = document.getElementById("status");
+  const countPill = document.getElementById("countPill");
+  const modePill = document.getElementById("modePill");
+  const scorePill = document.getElementById("scorePill");
+
+  // buttons
+  const btnAdd = document.getElementById("btnAdd");
+  const btnStudy = document.getElementById("btnStudy");
+  const btnShow = document.getElementById("btnShow");
+  const btnDel = document.getElementById("btnDel");
+
+  // backup/import
+  const btnBackup = document.getElementById("btnBackup");
+  const btnCopy = document.getElementById("btnCopy");
+  const btnImport = document.getElementById("btnImport");
+  const jsonBox = document.getElementById("jsonBox");
+
+  // quiz
+  const btnQuizStart = document.getElementById("btnQuizStart");
+  const btnQuizExit = document.getElementById("btnQuizExit");
+  const quizInput = document.getElementById("quizInput");
+  const btnQuizCheck = document.getElementById("btnQuizCheck");
+  const btnQuizNext = document.getElementById("btnQuizNext");
+  const btnQuizReveal = document.getElementById("btnQuizReveal");
+  const quizFeedback = document.getElementById("quizFeedback");
+
+  // ====== State ======
+  let current = null;          // {en,tr} selected
+  let quizMode = false;
+  let quizCurrent = null;      // current quiz word
+  let quizTotal = 0;
+  let quizCorrect = 0;
+
+  function setStatus(msg, kind="ok") {
+    statusEl.innerHTML = msg;
+    statusEl.className = kind === "bad" ? "bad" : "ok";
   }
 
-  function addWord() {
-    const en = norm(enEl.value);
-    const tr = norm(trEl.value);
+  function updateInfo() {
+    countPill.textContent = "Toplam kelime: " + words.length;
+    modePill.textContent = "Mod: " + (quizMode ? "Quiz" : "Normal");
+    scorePill.textContent = "Skor: " + quizCorrect + " / " + quizTotal;
+  }
 
+  function pickRandomWord() {
+    if (words.length === 0) return null;
+    const idx = Math.floor(Math.random() * words.length);
+    return words[idx];
+  }
+
+  // ====== Normal functions ======
+  function addWord() {
+    const en = enEl.value.trim();
+    const tr = trEl.value.trim();
     if (!en || !tr) {
-      updateInfo("⚠️ İngilizce ve Türkçe alanlarını doldur.");
+      setStatus("❌ İngilizce ve Türkçe alanlarını doldur.", "bad");
       return;
     }
 
-    // Aynı İngilizce kelime varsa güncelle
-    const idx = words.findIndex(w => w.en.toLowerCase() === en.toLowerCase());
-    if (idx >= 0) {
-      words[idx].tr = tr;
-      words[idx].createdAt = Date.now();
-      save();
-      updateInfo("✅ Var olan kelime güncellendi.");
-    } else {
-      words.push({ en, tr, createdAt: Date.now() });
-      save();
-      updateInfo("✅ Kelime eklendi.");
+    // prevent exact duplicate
+    const exists = words.some(w => w.en.toLowerCase() === en.toLowerCase() && w.tr.toLowerCase() === tr.toLowerCase());
+    if (exists) {
+      setStatus("⚠️ Bu kelime zaten var.", "bad");
+      return;
     }
+
+    words.push({ en, tr });
+    saveWords(words);
 
     enEl.value = "";
     trEl.value = "";
-    enEl.focus();
+    setStatus("✅ Kelime eklendi.");
+    updateInfo();
   }
 
-  function randomWord() {
+  function studyRandom() {
     if (words.length === 0) {
-      current = null;
-      cardEl.textContent = "Önce kelime ekle";
-      updateInfo("⚠️ Listede kelime yok.");
+      setStatus("❌ Henüz kelime yok. Önce kelime ekle.", "bad");
       return;
     }
-    const pick = words[Math.floor(Math.random() * words.length)];
-    const dir = Math.random() > 0.5 ? "en" : "tr";
-    current = { en: pick.en, tr: pick.tr, dir };
-    cardEl.textContent = dir === "en" ? pick.en : pick.tr;
-    updateInfo("🎯 Rastgele soru seçildi.");
+    current = pickRandomWord();
+    questionEl.textContent = current.en;
+    answerLineEl.textContent = ""; // hidden
+    setStatus("✅ Rastgele kelime seçildi.");
+    updateInfo();
   }
 
   function showAnswer() {
     if (!current) {
-      updateInfo("⚠️ Önce ‘Kelime Çalış (Rastgele)’ bas.");
+      setStatus("❌ Önce 'Kelime Çalış (Rastgele)' ile bir kelime seç.", "bad");
       return;
     }
-    cardEl.textContent = current.dir === "en" ? current.tr : current.en;
-    updateInfo("👀 Cevap gösterildi.");
+    answerLineEl.textContent = "Cevap: " + current.tr;
+    setStatus("✅ Cevap gösterildi.");
   }
 
   function deleteCurrent() {
     if (!current) {
-      updateInfo("⚠️ Silmek için önce bir kelime seç.");
+      setStatus("❌ Silmek için önce bir kelime seç.", "bad");
       return;
     }
     const before = words.length;
     words = words.filter(w => !(w.en === current.en && w.tr === current.tr));
-    if (words.length !== before) {
-      save();
-      updateInfo("🗑️ Seçili kelime silindi.");
-    } else {
-      updateInfo("⚠️ Silinecek kelime bulunamadı.");
-    }
+    saveWords(words);
+    const after = words.length;
+
     current = null;
-    cardEl.textContent = "Henüz soru yok";
+    questionEl.textContent = "Henüz soru yok";
+    answerLineEl.textContent = "";
+    setStatus(`🗑️ Silindi. (${before - after} adet)`);
+    updateInfo();
   }
 
-  function exportJson() {
-    // Sadece en,tr export edelim (temiz format)
-    const out = words.map(w => ({ en: w.en, tr: w.tr }));
-    const txt = JSON.stringify(out, null, 2);
-    jsonBox.value = txt;
-
-    // Dosya indir (Safari’de “Dosyalar’a Kaydet” açılır)
-    const blob = new Blob([txt], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "words.json";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-
-    updateInfo("✅ JSON yedek hazır. İndirilenlere/Dosyalara kaydedebilirsin.");
+  // ====== Backup / Import ======
+  function backupJSON() {
+    const data = JSON.stringify(words, null, 2);
+    jsonBox.value = data;
+    setStatus("✅ Yedek hazır. İstersen JSON’u kopyalayıp saklayabilirsin.");
   }
 
-  async function copyJson() {
-    const txt = jsonBox.value.trim();
-    if (!txt) { updateInfo("⚠️ Kopyalanacak JSON yok. Önce ‘Yedek Al (JSON)’ bas."); return; }
+  async function copyJSON() {
+    const text = jsonBox.value.trim();
+    if (!text) {
+      setStatus("❌ Önce 'Yedek Al (JSON)' de, sonra kopyala.", "bad");
+      return;
+    }
     try {
-      await navigator.clipboard.writeText(txt);
-      updateInfo("✅ JSON kopyalandı.");
+      await navigator.clipboard.writeText(text);
+      setStatus("✅ JSON kopyalandı.");
     } catch {
-      // iOS bazen izin vermez; fallback
+      // fallback
       jsonBox.focus();
       jsonBox.select();
-      updateInfo("ℹ️ Kopyalama için metni seçtim. ‘Kopyala’ de.");
+      setStatus("⚠️ Otomatik kopyalama olmadı. Metni seçip manuel kopyalayabilirsin.", "bad");
     }
   }
 
-  function importJson() {
-    const txt = jsonBox.value.trim();
-    if (!txt) { updateInfo("⚠️ İçe aktarılacak JSON yok."); return; }
-
+  function importJSON() {
+    const text = jsonBox.value.trim();
+    if (!text) {
+      setStatus("❌ JSON kutusu boş.", "bad");
+      return;
+    }
     try {
-      const parsed = JSON.parse(txt);
-      if (!Array.isArray(parsed)) throw new Error("JSON dizi değil");
+      const arr = JSON.parse(text);
+      if (!Array.isArray(arr)) throw new Error("not array");
 
-      const cleaned = parsed
-        .map(x => ({ en: norm(x.en), tr: norm(x.tr), createdAt: Date.now() }))
+      const cleaned = arr
+        .filter(x => x && typeof x.en === "string" && typeof x.tr === "string")
+        .map(x => ({ en: x.en.trim(), tr: x.tr.trim() }))
         .filter(x => x.en && x.tr);
 
-      if (cleaned.length === 0) {
-        updateInfo("⚠️ JSON içinde geçerli kelime bulunamadı.");
-        return;
-      }
-
-      // Var olanlarla birleştir (en bazlı)
-      const map = new Map(words.map(w => [w.en.toLowerCase(), w]));
-      for (const w of cleaned) {
-        map.set(w.en.toLowerCase(), w);
-      }
-      words = Array.from(map.values());
-      save();
-      updateInfo(`✅ İçe aktarıldı: ${cleaned.length} kayıt işlendi. Toplam: ${words.length}`);
-    } catch (e) {
-      updateInfo("❌ JSON okunamadı. Format hatalı olabilir.");
+      words = cleaned;
+      saveWords(words);
+      setStatus("✅ İçe aktarıldı. Toplam: " + words.length);
+      updateInfo();
+    } catch {
+      setStatus("❌ Geçersiz JSON. Lütfen doğru format yapıştır.", "bad");
     }
   }
 
-  // Event bağla
-  $("addBtn").addEventListener("click", addWord);
-  $("randomBtn").addEventListener("click", randomWord);
-  $("showBtn").addEventListener("click", showAnswer);
-  $("deleteBtn").addEventListener("click", deleteCurrent);
-  $("exportBtn").addEventListener("click", exportJson);
-  $("copyBtn").addEventListener("click", copyJson);
-  $("importBtn").addEventListener("click", importJson);
+  // ====== QUIZ (A) ======
+  function setQuizControls(enabled) {
+    quizInput.disabled = !enabled;
+    btnQuizCheck.disabled = !enabled;
+    btnQuizNext.disabled = !enabled;
+    btnQuizReveal.disabled = !enabled;
+  }
 
-  // Enter ile ekleme kolaylığı
-  trEl.addEventListener("keydown", (e) => { if (e.key === "Enter") addWord(); });
-  enEl.addEventListener("keydown", (e) => { if (e.key === "Enter") trEl.focus(); });
+  function quizStart() {
+    if (words.length === 0) {
+      setStatus("❌ Quiz için önce kelime eklemelisin.", "bad");
+      return;
+    }
+    quizMode = true;
+    quizTotal = 0;
+    quizCorrect = 0;
+    quizFeedback.textContent = "Quiz başladı. İngilizce kelimeyi gör, Türkçesini yaz.";
+    setQuizControls(true);
+    quizNext(); // first question
+    updateInfo();
+    setStatus("✅ Quiz modu açık.");
+  }
 
-  // Başlat
-  load();
-  updateInfo("✅ Hazır. Kelime ekleyebilirsin.");
-})();
+  function quizExit() {
+    quizMode = false;
+    quizCurrent = null;
+    quizInput.value = "";
+    quizFeedback.textContent = "";
+    setQuizControls(false);
+    questionEl.textContent = "Henüz soru yok";
+    answerLineEl.textContent = "";
+    updateInfo();
+    setStatus("✅ Quiz kapatıldı.");
+  }
+
+  function quizNext() {
+    if (!quizMode) return;
+    quizCurrent = pickRandomWord();
+    questionEl.textContent = quizCurrent.en;   // A: show English
+    answerLineEl.textContent = "";             // hide
+    quizInput.value = "";
+    quizInput.focus();
+    quizFeedback.textContent = "Türkçesini yazıp 'Kontrol Et' bas.";
+    updateInfo();
+  }
+
+  function normalizeTR(s) {
+    return (s || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+  }
+
+  function quizCheck() {
+    if (!quizMode || !quizCurrent) return;
+
+    const userAns = normalizeTR(quizInput.value);
+    const correctAns = normalizeTR(quizCurrent.tr);
+
+    if (!userAns) {
+      quizFeedback.innerHTML = `<span class="bad">❌ Boş bırakma.</span>`;
+      return;
+    }
+
+    quizTotal += 1;
+
+    if (userAns === correctAns) {
+      quizCorrect += 1;
+      quizFeedback.innerHTML = `<span class="ok">✅ Doğru!</span>`;
+      setStatus("✅ Doğru cevap.");
+    } else {
+      quizFeedback.innerHTML = `<span class="bad">❌ Yanlış.</span> Doğru: <b>${quizCurrent.tr}</b>`;
+      setStatus("❌ Yanlış cevap.", "bad");
+    }
+
+    updateInfo();
+  }
+
+  function quizReveal() {
+    if (!quizMode || !quizCurrent) return;
+    quizFeedback.innerHTML = `Doğru: <b>${quizCurrent.tr}</b>`;
+    setStatus("ℹ️ Doğru cevap gösterildi.");
+  }
+
+  // ====== Events ======
+  btnAdd.addEventListener("click", addWord);
+  btnStudy.addEventListener("click", studyRandom);
+  btnShow.addEventListener("click", showAnswer);
+  btnDel.addEventListener("click", deleteCurrent);
+
+  btnBackup.addEventListener("click", backupJSON);
+  btnCopy.addEventListener("click", copyJSON);
+  btnImport.addEventListener("click", importJSON);
+
+  btnQuizStart.addEventListener("click", quizStart);
+  btnQuizExit.addEventListener("click", quizExit);
+  btnQuizNext.addEventListener("click", quizNext);
+  btnQuizCheck.addEventListener("click", quizCheck);
+  btnQuizReveal.addEventListener("click", quizReveal);
+
+  // Enter ile kontrol et
+  quizInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !btnQuizCheck.disabled) {
+      quizCheck();
+    }
+  });
+
+  // init
+  updateInfo();
 </script>
 </body>
 </html>
